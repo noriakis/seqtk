@@ -2039,6 +2039,44 @@ int stk_telo(int argc, char *argv[])
 	return 0;
 }
 
+
+int stk_stat(int argc, char *argv[]) {
+	gzFile fp;
+	kseq_t *seq;
+	uint64_t n = 0, l = 0, max=0, min=0;
+	if (argc == 1 && isatty(fileno(stdin))) {
+		fprintf(stderr, "Usage: seqtk size <in.fq>\n");
+		return 1;
+	}
+	fp = argc > 1 && strcmp(argv[1], "-")? gzopen(argv[1], "r") : gzdopen(fileno(stdin), "r");
+	if (fp == 0) {
+		fprintf(stderr, "[E::%s] failed to open the input file/stream.\n", __func__);
+		return 1;
+	}
+	seq = kseq_init(fp);
+	while (kseq_read(seq) >= 0) {
+		++n;
+		l += seq->seq.l;
+		if (n == 1) {
+			max = seq->seq.l;
+			min = seq->seq.l;
+		}
+      else if ( max < seq->seq.l )
+      {
+        max = seq->seq.l;
+      }
+      else if ( seq->seq.l < min )
+      {
+        min = seq->seq.l;
+      }
+	}
+	kseq_destroy(seq);
+	gzclose(fp);
+	printf("%lld\t%lld\t%lld\t%lld\n", (long long)n, (long long)l, (long long)max, (long long)min);
+	return 0;
+	
+}
+
 /* main function */
 static int usage()
 {
@@ -2098,6 +2136,7 @@ int main(int argc, char *argv[])
 	else if (strcmp(argv[1], "hpc") == 0) return stk_hpc(argc-1, argv+1);
 	else if (strcmp(argv[1], "size") == 0) return stk_size(argc-1, argv+1);
 	else if (strcmp(argv[1], "telo") == 0) return stk_telo(argc-1, argv+1);
+	else if (strcmp(argv[1], "stat") == 0) return stk_stat(argc-1, argv+1);
 	else {
 		fprintf(stderr, "[main] unrecognized command '%s'. Abort!\n", argv[1]);
 		return 1;
